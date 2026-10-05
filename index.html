@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuevo Testamento Bizantino</title>
+  
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f8fafc">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-900">
+
+  <!-- Encabezado Principal -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-lg font-semibold text-slate-700 tracking-tight">
+        NT Bizantino <span class="text-xs text-slate-500 font-normal ml-1">Griego</span>
+      </h1>
+      
+      <!-- Navegación por Pestañas -->
+      <nav class="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-medium">
+        <button id="btn-tab-interlineal" onclick="cambiarPestana('interlineal')" class="px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm transition-all">
+          Interlineal
+        </button>
+        <button id="btn-tab-limpia" onclick="cambiarPestana('limpia')" class="px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-800 transition-all">
+          Texto Limpio
+        </button>
+        <button id="btn-tab-concordancia" onclick="cambiarPestana('concordancia')" class="px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-800 transition-all">
+          Concordancia
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal -->
+  <main class="max-w-5xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-6">
+
+    <!-- SECCIÓN DE SELECCIÓN REUTILIZABLE (LECTURA INTERLINEAL Y LIMPIA) -->
+    <section id="panel-seleccion" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-wrap gap-4 items-end">
+      <!-- Selector Libro -->
+      <div class="flex-1 min-w-[160px]">
+        <label for="sel-libro" class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Libro</label>
+        <select id="sel-libro" onchange="cambiarLibro()" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all">
+          <option value="">Cargando datos...</option>
+        </select>
+      </div>
+
+      <!-- Selector Capítulo -->
+      <div class="w-28">
+        <label for="sel-capitulo" class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Capítulo</label>
+        <select id="sel-capitulo" onchange="cargarVersiculos()" disabled class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 disabled:opacity-50 disabled:bg-slate-100 transition-all">
+          <option value="">--</option>
+        </select>
+      </div>
+
+      <!-- Selector Versículo -->
+      <div class="w-36">
+        <label for="sel-versiculo" class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Versículo</label>
+        <select id="sel-versiculo" onchange="filtrarVersiculo()" disabled class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 disabled:opacity-50 disabled:bg-slate-100 transition-all">
+          <option value="">Todos los versículos</option>
+        </select>
+      </div>
+
+      <!-- Botones Copiar y Limpiar Lectura -->
+      <div class="flex gap-2 ml-auto">
+        <button onclick="copiarTextoVisor()" title="Copiar texto actual" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium transition-colors flex items-center gap-1">
+          Copiar
+        </button>
+        <button onclick="limpiarSeleccion()" title="Limpiar selección" class="px-3 py-2 bg-slate-100 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-700 border border-slate-300 text-slate-600 rounded-lg text-xs font-medium transition-colors">
+          Limpiar
+        </button>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 1: LECTOR INTERLINEAL -->
+    <div id="pestana-interlineal" class="flex flex-col gap-6">
+      <section class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm min-h-[300px]">
+        <div id="lector-interlineal-contenido" class="space-y-6">
+          <div class="text-center text-slate-400 py-16 text-sm">
+            Selecciona un libro y capítulo para comenzar la lectura interlineal.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PESTAÑA 2: LECTURA LIMPIA (SIN STRONG / MORFOLOGÍA) -->
+    <div id="pestana-limpia" class="hidden flex flex-col gap-6">
+      <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm min-h-[300px]">
+        <div id="lector-limpio-contenido" class="space-y-4">
+          <div class="text-center text-slate-400 py-16 text-sm">
+            Selecciona un libro y capítulo para leer el texto en griego continuo.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PESTAÑA 3: CONCORDANCIA -->
+    <div id="pestana-concordancia" class="hidden flex flex-col gap-6">
+      <section class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-wrap gap-3 items-center">
+        <input type="text" id="input-busqueda" placeholder="Buscar por número Strong (ej: 2570) o palabra griega..." 
+               onkeyup="if(event.key==='Enter') ejecutarBusqueda()"
+               class="flex-1 min-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500">
+        
+        <button onclick="ejecutarBusqueda()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors">
+          Buscar
+        </button>
+
+        <!-- Botones Copiar y Limpiar para Concordancia -->
+        <div class="flex gap-2 ml-auto">
+          <button onclick="copiarConcordancia()" title="Copiar resultados de la concordancia" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium transition-colors">
+            Copiar
+          </button>
+          <button onclick="limpiarConcordancia()" title="Limpiar búsqueda" class="px-3 py-2 bg-slate-100 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-700 border border-slate-300 text-slate-600 rounded-lg text-xs font-medium transition-colors">
+            Limpiar
+          </button>
+        </div>
+      </section>
+
+      <section class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm min-h-[300px]">
+        <div id="concordancia-contenido" class="space-y-6">
+          <div class="text-center text-slate-400 py-16 text-sm">
+            Ingresa un número Strong o una palabra griega para buscar todas sus apariciones.
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Toast Notificación al copiar -->
+  <div id="toast-copiado" class="fixed bottom-5 right-5 bg-slate-800 text-white text-xs px-4 py-2.5 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+    Texto copiado al portapapeles
+  </div>
+
+  <!-- Lógica JavaScript -->
+  <script>
+    let dbData = [];
+    let pestanaActiva = 'interlineal';
+    let resultadosConcordancia = [];
+
+    // Orden canónico del Nuevo Testamento
+    const ORDEN_NT = [
+      "Mateo", "Marcos", "Lucas", "Juan", "Hechos", 
+      "Romanos", "1 Corintios", "2 Corintios", "Gálatas", "Efesios", 
+      "Filipenses", "Colosenses", "1 Tesalonicenses", "2 Tesalonicenses", 
+      "1 Timoteo", "2 Timoteo", "Tito", "Filemón", "Hebreos", 
+      "Santiago", "1 Pedro", "2 Pedro", "1 Juan", "2 Juan", 
+      "3 Juan", "Judas", "Apocalipsis"
+    ];
+
+    // Diccionario Morfológico
+    const DIC_MORFO = {
+      'V': 'Verbo', 'N': 'Sustantivo', 'A': 'Adjetivo', 'D': 'Pronombre Demostrativo / Adverbio',
+      'P': 'Pronombre Personal', 'R': 'Pronombre Relativo', 'C': 'Conjunción', 'CONJ': 'Conjunción',
+      'I': 'Interjección', 'PREP': 'Preposición', 'ART': 'Artículo', 'T': 'Artículo / Partícula',
+      'ADV': 'Adverbio', 'PRON': 'Pronombre',
+      'P-t': 'Presente', 'I-t': 'Imperfecto', 'F-t': 'Futuro', 'A-t': 'Aoristo',
+      '2A-t': 'Aoristo 2º', '2A': 'Aoristo 2º', '2F-t': 'Futuro 2º', '2F': 'Futuro 2º',
+      'X-t': 'Perfecto', 'Y-t': 'Pluscuamperfecto',
+      'A-v': 'Activa', 'M-v': 'Media', 'P-v': 'Pasiva', 'D-v': 'Deponente', 'O-v': 'Deponente Pasivo',
+      'I-m': 'Indicativo', 'S-m': 'Subjuntivo', 'O-m': 'Optativo',
+      'M-m': 'Imperativo', 'N-m': 'Infinitivo', 'P-m': 'Participio',
+      'N-c': 'Nominativo', 'G-c': 'Genitivo', 'D-c': 'Dativo', 'A-c': 'Acusativo', 'V-c': 'Vocativo',
+      'S-n': 'Singular', 'P-n': 'Plural',
+      'M-g': 'Masculino', 'F-g': 'Femenino', 'N-g': 'Neutro'
+    };
+
+    function decodificarMorfologia(codigo) {
+      if (!codigo) return '';
+      const partes = codigo.trim().split('-');
+      let descripciones = [];
+
+      const cat = partes[0];
+      if (DIC_MORFO[cat]) descripciones.push(DIC_MORFO[cat]);
+
+      if (partes.length >= 2) {
+        let tvm = partes[1];
+        let tKey = tvm.startsWith('2') ? tvm.substring(0, 2) : tvm.substring(0, 1);
+        let rest = tvm.substring(tKey.length);
+        let vKey = rest.substring(0, 1);
+        let mKey = rest.substring(1, 2);
+
+        if (DIC_MORFO[tKey + '-t']) descripciones.push(DIC_MORFO[tKey + '-t']);
+        if (DIC_MORFO[vKey + '-v']) descripciones.push(DIC_MORFO[vKey + '-v']);
+        if (DIC_MORFO[mKey + '-m']) descripciones.push(DIC_MORFO[mKey + '-m']);
+        if (mKey === 'N') descripciones.push('Infinitivo');
+      }
+
+      if (partes.length >= 3) {
+        const cng = partes[2];
+        for (let char of cng) {
+          if (char === '1') descripciones.push('1ª Persona');
+          else if (char === '2') descripciones.push('2ª Persona');
+          else if (char === '3') descripciones.push('3ª Persona');
+          else if (DIC_MORFO[char + '-c']) descripciones.push(DIC_MORFO[char + '-c']);
+          else if (DIC_MORFO[char + '-n']) descripciones.push(DIC_MORFO[char + '-n']);
+          else if (DIC_MORFO[char + '-g']) descripciones.push(DIC_MORFO[char + '-g']);
+        }
+      }
+
+      return descripciones.length > 0 ? descripciones.join(' • ') : codigo;
+    }
+
+    // Carga de datos
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('bizantino_strong.json')
+        .then(res => {
+          if (!res.ok) throw new Error(`Estado HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          dbData = data.map(item => ({
+            libro: item.libro || item.l || item.book || '',
+            capitulo: parseInt(item.capitulo || item.cap || item.c || item.chapter || 0),
+            versiculo: parseInt(item.versiculo || item.ver || item.v || item.verse || 0),
+            tokens: item.tokens || item.palabras || item.t || []
+          }));
+          inicializarLibros();
+        })
+        .catch(err => {
+          console.error('Error:', err);
+          document.getElementById('lector-interlineal-contenido').innerHTML = `
+            <div class="text-center text-rose-500 py-12 text-sm">
+              Error al cargar <code>bizantino_strong.json</code>.
+            </div>`;
+        });
+    });
+
+    // Control de Pestañas
+    function cambiarPestana(pestana) {
+      pestanaActiva = pestana;
+      const pInter = document.getElementById('pestana-interlineal');
+      const pLimpia = document.getElementById('pestana-limpia');
+      const pConcordancia = document.getElementById('pestana-concordancia');
+      const pPanelSel = document.getElementById('panel-seleccion');
+
+      const bInter = document.getElementById('btn-tab-interlineal');
+      const bLimpia = document.getElementById('btn-tab-limpia');
+      const bConcordancia = document.getElementById('btn-tab-concordancia');
+
+      const activeClass = "px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm transition-all";
+      const inactiveClass = "px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-800 transition-all";
+
+      pInter.classList.add('hidden');
+      pLimpia.classList.add('hidden');
+      pConcordancia.classList.add('hidden');
+
+      bInter.className = inactiveClass;
+      bLimpia.className = inactiveClass;
+      bConcordancia.className = inactiveClass;
+
+      if (pestana === 'interlineal') {
+        pInter.classList.remove('hidden');
+        pPanelSel.classList.remove('hidden');
+        bInter.className = activeClass;
+      } else if (pestana === 'limpia') {
+        pLimpia.classList.remove('hidden');
+        pPanelSel.classList.remove('hidden');
+        bLimpia.className = activeClass;
+      } else if (pestana === 'concordancia') {
+        pConcordancia.classList.remove('hidden');
+        pPanelSel.classList.add('hidden');
+        bConcordancia.className = activeClass;
+      }
+
+      filtrarVersiculo();
+    }
+
+    // Inicialización de Selectores
+    function inicializarLibros() {
+      const selLibro = document.getElementById('sel-libro');
+      const librosEnJSON = new Set(dbData.map(item => item.libro));
+      const librosOrdenados = ORDEN_NT.filter(libro => librosEnJSON.has(libro));
+
+      librosEnJSON.forEach(libro => {
+        if (libro && !librosOrdenados.includes(libro)) librosOrdenados.push(libro);
+      });
+
+      selLibro.innerHTML = '<option value="">-- Selecciona un Libro --</option>';
+      librosOrdenados.forEach(libro => {
+        const opt = document.createElement('option');
+        opt.value = libro;
+        opt.textContent = libro;
+        selLibro.appendChild(opt);
+      });
+    }
+
+    function cambiarLibro() {
+      const libro = document.getElementById('sel-libro').value;
+      const selCap = document.getElementById('sel-capitulo');
+      const selVer = document.getElementById('sel-versiculo');
+
+      selCap.innerHTML = '<option value="">--</option>';
+      selVer.innerHTML = '<option value="">Todos los versículos</option>';
+      selVer.disabled = true;
+
+      if (!libro) {
+        selCap.disabled = true;
+        limpiarVisores();
+        return;
+      }
+
+      const caps = [...new Set(dbData.filter(i => i.libro === libro).map(i => i.capitulo))].sort((a, b) => a - b);
+      caps.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        selCap.appendChild(opt);
+      });
+
+      selCap.disabled = false;
+      limpiarVisores();
+    }
+
+    function cargarVersiculos() {
+      const libro = document.getElementById('sel-libro').value;
+      const cap = parseInt(document.getElementById('sel-capitulo').value);
+      const selVer = document.getElementById('sel-versiculo');
+
+      if (!libro || isNaN(cap)) {
+        limpiarVisores();
+        return;
+      }
+
+      const versiculos = dbData.filter(item => item.libro === libro && item.capitulo === cap);
+      versiculos.sort((a, b) => a.versiculo - b.versiculo);
+
+      if (versiculos.length === 0) {
+        limpiarVisores("No se encontraron versículos.");
+        selVer.disabled = true;
+        selVer.innerHTML = '<option value="">--</option>';
+        return;
+      }
+
+      selVer.innerHTML = '<option value="">Todos los versículos</option>';
+      versiculos.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.versiculo;
+        opt.textContent = `Versículo ${v.versiculo}`;
+        selVer.appendChild(opt);
+      });
+      selVer.disabled = false;
+
+      filtrarVersiculo();
+    }
+
+    function filtrarVersiculo() {
+      const libro = document.getElementById('sel-libro').value;
+      const cap = parseInt(document.getElementById('sel-capitulo').value);
+      const numVer = document.getElementById('sel-versiculo').value;
+
+      if (!libro || isNaN(cap)) return;
+
+      let versiculos = dbData.filter(item => item.libro === libro && item.capitulo === cap);
+      if (numVer !== "") {
+        versiculos = versiculos.filter(item => item.versiculo === parseInt(numVer));
+      }
+
+      versiculos.sort((a, b) => a.versiculo - b.versiculo);
+
+      if (pestanaActiva === 'interlineal') {
+        renderizarTextoInterlineal(versiculos);
+      } else if (pestanaActiva === 'limpia') {
+        renderizarTextoLimpio(versiculos);
+      }
+    }
+
+    // Renderizado Interlineal
+    function renderizarTextoInterlineal(versiculos) {
+      const contenedor = document.getElementById('lector-interlineal-contenido');
+      let html = '';
+
+      versiculos.forEach(v => {
+        html += `
+          <div class="border-b border-slate-100 pb-5 pt-2 rounded-lg px-2">
+            <div class="text-slate-600 font-semibold text-xs tracking-wide mb-3 flex items-center gap-2">
+              <span class="bg-slate-100 text-slate-700 border border-slate-200 text-xs font-mono font-bold px-2 py-0.5 rounded">
+                ${v.versiculo}
+              </span>
+              <span class="text-slate-500">${v.libro} ${v.capitulo}:${v.versiculo}</span>
+            </div>
+            <div class="flex flex-wrap gap-x-3 gap-y-3 leading-normal">`;
+
+        v.tokens.forEach(t => {
+          const palabra = t.p || t.palabra || t.w || t.text || '';
+          const strong = t.s || t.strong || '';
+          const morfo = t.m || t.morfologia || t.morph || '';
+
+          const strongBtn = strong !== '' 
+            ? `<button onclick="buscarEnConcordancia('${strong}')" title="Buscar G${strong} en concordancia" class="text-[11px] text-amber-700 font-mono font-medium hover:underline cursor-pointer">G${strong}</button>`
+            : `<span class="text-[10px] text-slate-300 font-mono">-</span>`;
+
+          html += `
+            <div class="inline-flex flex-col items-center min-w-[2.5rem] px-1.5 py-1 rounded-md bg-slate-50/60 hover:bg-slate-100 transition-colors border border-slate-100">
+              <span class="text-base font-serif text-slate-800">${palabra}</span>
+              ${strongBtn}
+              <span title="${decodificarMorfologia(morfo)}" class="text-[10px] text-slate-500 font-mono cursor-help hover:text-emerald-700 transition-colors">${morfo}</span>
+            </div>`;
+        });
+
+        html += `</div></div>`;
+      });
+
+      contenedor.innerHTML = html;
+    }
+
+    // Renderizado Limpio (Solo Texto Griego Continuo)
+    function renderizarTextoLimpio(versiculos) {
+      const contenedor = document.getElementById('lector-limpio-contenido');
+      let html = '';
+
+      versiculos.forEach(v => {
+        const textoLimpio = v.tokens.map(t => t.p || t.palabra || t.w || t.text || '').join(' ');
+
+        html += `
+          <div class="py-2 border-b border-slate-100 last:border-0 flex items-baseline gap-3">
+            <span class="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded shrink-0">
+              ${v.versiculo}
+            </span>
+            <p class="text-lg font-serif text-slate-800 leading-relaxed">
+              ${textoLimpio}
+            </p>
+          </div>`;
+      });
+
+      contenedor.innerHTML = html;
+    }
+
+    // Acciones para Lecturas (Copiar y Limpiar)
+    function copiarTextoVisor() {
+      const libro = document.getElementById('sel-libro').value;
+      const cap = document.getElementById('sel-capitulo').value;
+      const numVer = document.getElementById('sel-versiculo').value;
+
+      if (!libro || !cap) {
+        mostrarToast("Selecciona al menos libro y capítulo");
+        return;
+      }
+
+      let versiculos = dbData.filter(item => item.libro === libro && item.capitulo === parseInt(cap));
+      if (numVer !== "") {
+        versiculos = versiculos.filter(item => item.versiculo === parseInt(numVer));
+      }
+
+      versiculos.sort((a, b) => a.versiculo - b.versiculo);
+
+      const lineas = versiculos.map(v => {
+        const texto = v.tokens.map(t => t.p || t.palabra || t.w || t.text || '').join(' ');
+        return `${v.libro} ${v.capitulo}:${v.versiculo} - ${texto}`;
+      });
+
+      const textoFinal = lineas.join('\n');
+
+      navigator.clipboard.writeText(textoFinal).then(() => {
+        mostrarToast("Texto copiado al portapapeles");
+      });
+    }
+
+    function limpiarSeleccion() {
+      document.getElementById('sel-libro').value = "";
+      cambiarLibro();
+    }
+
+    function limpiarVisores(mensaje = "Selecciona un libro y capítulo para comenzar.") {
+      document.getElementById('lector-interlineal-contenido').innerHTML = `
+        <div class="text-center text-slate-400 py-16 text-sm">${mensaje}</div>`;
+      document.getElementById('lector-limpio-contenido').innerHTML = `
+        <div class="text-center text-slate-400 py-16 text-sm">${mensaje}</div>`;
+    }
+
+    // Acciones para Concordancia (Copiar y Limpiar)
+    function copiarConcordancia() {
+      if (resultadosConcordancia.length === 0) {
+        mostrarToast("No hay resultados para copiar");
+        return;
+      }
+
+      const lineas = resultadosConcordancia.map(v => {
+        const texto = v.tokens.map(t => t.p || t.palabra || t.w || t.text || '').join(' ');
+        return `${v.libro} ${v.capitulo}:${v.versiculo} - ${texto}`;
+      });
+
+      const textoFinal = lineas.join('\n');
+
+      navigator.clipboard.writeText(textoFinal).then(() => {
+        mostrarToast(`Copiados ${resultadosConcordancia.length} versículos`);
+      });
+    }
+
+    function limpiarConcordancia() {
+      document.getElementById('input-busqueda').value = '';
+      resultadosConcordancia = [];
+      document.getElementById('concordancia-contenido').innerHTML = `
+        <div class="text-center text-slate-400 py-16 text-sm">
+          Ingresa un número Strong o una palabra griega para buscar todas sus apariciones.
+        </div>`;
+    }
+
+    function mostrarToast(mensaje) {
+      const toast = document.getElementById('toast-copiado');
+      toast.textContent = mensaje;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => {
+        toast.classList.add('opacity-0');
+      }, 2000);
+    }
+
+    // Funciones de Búsqueda en Concordancia
+    function buscarEnConcordancia(codigoStrong) {
+      cambiarPestana('concordancia');
+      document.getElementById('input-busqueda').value = codigoStrong;
+      ejecutarBusqueda();
+    }
+
+    function ejecutarBusqueda() {
+      let query = document.getElementById('input-busqueda').value.trim();
+      const contenedor = document.getElementById('concordancia-contenido');
+
+      if (!query) {
+        contenedor.innerHTML = '<div class="text-center text-slate-400 py-12 text-sm">Por favor, ingresa un término de búsqueda.</div>';
+        resultadosConcordancia = [];
+        return;
+      }
+
+      const esStrong = /^G?\d+$/i.test(query);
+      if (esStrong) {
+        query = query.replace(/^G/i, '');
+      }
+
+      let resultados = [];
+
+      // 1. Filtrar registros coincidentes
+      dbData.forEach(v => {
+        const coincide = v.tokens.some(t => {
+          const strong = (t.s || t.strong || '').toString();
+          const palabra = (t.p || t.palabra || t.w || t.text || '').toLowerCase();
+
+          return esStrong ? (strong === query) : palabra.includes(query.toLowerCase());
+        });
+
+        if (coincide) resultados.push(v);
+      });
+
+      if (resultados.length === 0) {
+        contenedor.innerHTML = `<div class="text-center text-slate-400 py-12 text-sm">No se encontraron coincidencias para "${query}".</div>`;
+        resultadosConcordancia = [];
+        return;
+      }
+
+      // 2. Ordenamiento Canónico NT (Libro -> Capítulo -> Versículo)
+      resultados.sort((a, b) => {
+        const idxA = ORDEN_NT.indexOf(a.libro);
+        const idxB = ORDEN_NT.indexOf(b.libro);
+
+        if (idxA !== idxB) {
+          if (idxA === -1) return 1;
+          if (idxB === -1) return -1;
+          return idxA - idxB;
+        }
+
+        if (a.capitulo !== b.capitulo) {
+          return a.capitulo - b.capitulo;
+        }
+
+        return a.versiculo - b.versiculo;
+      });
+
+      resultadosConcordancia = resultados;
+
+      // 3. Renderizado de resultados
+      let html = `<div class="text-xs text-slate-500 font-medium mb-4">Se encontraron ${resultados.length} versículos con coincidencias:</div>`;
+
+      resultados.forEach(v => {
+        html += `
+          <div class="border-b border-slate-100 pb-4 pt-1">
+            <div class="text-xs font-semibold text-emerald-800 mb-2">
+              ${v.libro} ${v.capitulo}:${v.versiculo}
+            </div>
+            <div class="flex flex-wrap gap-x-2 gap-y-2">`;
+
+        v.tokens.forEach(t => {
+          const palabra = t.p || t.palabra || t.w || t.text || '';
+          const strong = (t.s || t.strong || '').toString();
+
+          const esCoincidencia = esStrong ? (strong === query) : palabra.toLowerCase().includes(query.toLowerCase());
+
+          html += `
+            <div class="inline-flex flex-col items-center px-1 py-0.5 rounded ${esCoincidencia ? 'bg-amber-100 border border-amber-300' : ''}">
+              <span class="text-sm font-serif ${esCoincidencia ? 'font-bold text-amber-900' : 'text-slate-700'}">${palabra}</span>
+              <span class="text-[9px] text-slate-400 font-mono">${strong ? 'G' + strong : '-'}</span>
+            </div>`;
+        });
+
+        html += `</div></div>`;
+      });
+
+      contenedor.innerHTML = html;
+    }
+
+    // Service Worker (PWA)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW:', err));
+      });
+    }
+  </script>
+</body>
+</html>
