@@ -182,41 +182,53 @@
       'M-g': 'Masculino', 'F-g': 'Femenino', 'N-g': 'Neutro'
     };
 
-    function decodificarMorfologia(codigo) {
-      if (!codigo) return '';
-      const partes = codigo.trim().split('-');
-      let descripciones = [];
+function decodificarMorfologia(codigo) {
+  if (!codigo) return '';
+  const partes = codigo.trim().split('-');
+  let descripciones = [];
 
-      const cat = partes[0];
-      if (DIC_MORFO[cat]) descripciones.push(DIC_MORFO[cat]);
+  const cat = partes[0];
+  if (DIC_MORFO[cat]) descripciones.push(DIC_MORFO[cat]);
 
-      if (partes.length >= 2) {
-        let tvm = partes[1];
-        let tKey = tvm.startsWith('2') ? tvm.substring(0, 2) : tvm.substring(0, 1);
-        let rest = tvm.substring(tKey.length);
-        let vKey = rest.substring(0, 1);
-        let mKey = rest.substring(1, 2);
+  // Si es un Verbo (ej. V-PAI-3S, V-2AAN)
+  if (cat === 'V') {
+    if (partes.length >= 2) {
+      let tvm = partes[1];
+      let tKey = tvm.startsWith('2') ? tvm.substring(0, 2) : tvm.substring(0, 1);
+      let rest = tvm.substring(tKey.length);
+      let vKey = rest.substring(0, 1);
+      let mKey = rest.substring(1, 2);
 
-        if (DIC_MORFO[tKey + '-t']) descripciones.push(DIC_MORFO[tKey + '-t']);
-        if (DIC_MORFO[vKey + '-v']) descripciones.push(DIC_MORFO[vKey + '-v']);
-        if (DIC_MORFO[mKey + '-m']) descripciones.push(DIC_MORFO[mKey + '-m']);
-        if (mKey === 'N') descripciones.push('Infinitivo');
-      }
-
-      if (partes.length >= 3) {
-        const cng = partes[2];
-        for (let char of cng) {
-          if (char === '1') descripciones.push('1ª Persona');
-          else if (char === '2') descripciones.push('2ª Persona');
-          else if (char === '3') descripciones.push('3ª Persona');
-          else if (DIC_MORFO[char + '-c']) descripciones.push(DIC_MORFO[char + '-c']);
-          else if (DIC_MORFO[char + '-n']) descripciones.push(DIC_MORFO[char + '-n']);
-          else if (DIC_MORFO[char + '-g']) descripciones.push(DIC_MORFO[char + '-g']);
-        }
-      }
-
-      return descripciones.length > 0 ? descripciones.join(' • ') : codigo;
+      if (DIC_MORFO[tKey + '-t']) descripciones.push(DIC_MORFO[tKey + '-t']);
+      if (DIC_MORFO[vKey + '-v']) descripciones.push(DIC_MORFO[vKey + '-v']);
+      if (DIC_MORFO[mKey + '-m']) descripciones.push(DIC_MORFO[mKey + '-m']);
+      if (mKey === 'N') descripciones.push('Infinitivo');
     }
+
+    if (partes.length >= 3) {
+      const rest = partes[2];
+      for (let char of rest) {
+        if (char === '1') descripciones.push('1ª Persona');
+        else if (char === '2') descripciones.push('2ª Persona');
+        else if (char === '3') descripciones.push('3ª Persona');
+        else if (DIC_MORFO[char + '-c']) descripciones.push(DIC_MORFO[char + '-c']);
+        else if (DIC_MORFO[char + '-n']) descripciones.push(DIC_MORFO[char + '-n']);
+        else if (DIC_MORFO[char + '-g']) descripciones.push(DIC_MORFO[char + '-g']);
+      }
+    }
+  } 
+  // Para Sustantivos, Adjetivos, Artículos, Pronombres, etc. (ej. N-NSM)
+  else {
+    const cng = partes[1] || '';
+    for (let char of cng) {
+      if (DIC_MORFO[char + '-c']) descripciones.push(DIC_MORFO[char + '-c']);
+      else if (DIC_MORFO[char + '-n']) descripciones.push(DIC_MORFO[char + '-n']);
+      else if (DIC_MORFO[char + '-g']) descripciones.push(DIC_MORFO[char + '-g']);
+    }
+  }
+
+  return descripciones.length > 0 ? descripciones.join(' • ') : codigo;
+}
 
     // Carga de datos
     document.addEventListener('DOMContentLoaded', () => {
